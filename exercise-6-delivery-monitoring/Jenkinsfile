@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    stages {
+        stage('Pre-check Docker') {
+            steps {
+                sh 'docker --version'
+                sh 'docker info > /dev/null && echo "Docker daemon is running"'
+            }
+        }
+        stage('Setup Workspace') {
+            steps {
+                sh '''
+                cp /source/delivery_metrics.py $WORKSPACE/
+                cp /source/Dockerfile $WORKSPACE/
+                cp /source/prometheus.yml $WORKSPACE/
+                cp /source/alert_rules.yml $WORKSPACE/
+                ls -l $WORKSPACE
+                '''
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t delivery_metrics .'
+            }
+        }
+        stage('Run Application') {
+            steps {
+                sh '''
+                docker rm -f delivery_metrics || true
+                docker run -d -p 8001:8000 --name delivery_metrics delivery_metrics
+                docker ps --filter name=delivery_metrics
+                '''
+            }
+        }
+    }
+}
